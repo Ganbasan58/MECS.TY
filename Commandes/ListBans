@@ -1,0 +1,51 @@
+// ListBans.js
+
+const { EmbedBuilder } = require('discord.js'); // Assurez-vous d'importer EmbedBuilder
+
+class ListBans {
+    constructor() {
+        this.name = 'listbans';
+        this.description = 'Affiche la liste des utilisateurs bannis avec des filtres';
+    }
+
+    async execute(message) {
+        if (message.content === '!listbans') {
+            if (!message.member.permissions.has('BAN_MEMBERS')) {
+                return message.reply('Vous n\'avez pas la permission d\'utiliser cette commande.');
+            }
+            try {
+                const bans = await message.guild.bans.fetch();
+                if (bans.size === 0) {
+                    return message.reply('Il n\'y a aucun utilisateur banni sur ce serveur.');
+                }
+                let minorBanCount = 0;
+                let femmeBanCount = 0;
+                bans.forEach(ban => {
+                    const reason = ban.reason ? ban.reason.toLowerCase() : '';
+                    if (reason.includes('mineur') || reason.includes('rôle mineur')) {
+                        minorBanCount++;
+                    }
+                    if (reason.includes('femme') || reason.includes('rôle femme')) {
+                        femmeBanCount++;
+                    }
+                });
+                const totalBanCount = minorBanCount + femmeBanCount;
+                const embed = new EmbedBuilder()
+                    .setTitle('Liste des utilisateurs bannis')
+                    .setColor('#FF0000')
+                    .addFields(
+                        { name: 'Nombre de bannissements pour "mineur"', value: `:arrow_right: ${minorBanCount}`, inline: false },
+                        { name: 'Nombre de bannissements pour "femme"', value: `:arrow_right: ${femmeBanCount}`, inline: false },
+                        { name: 'Nombre total de bannissements', value: `:arrow_right: ${totalBanCount}`, inline: false }
+                    )
+                    .setFooter({ text: 'Commande !listbans' });
+                await message.channel.send({ embeds: [embed] });
+            } catch (error) {
+                console.error(error);
+                message.reply('Une erreur est survenue lors de la récupération de la liste des utilisateurs bannis.');
+            }
+        }
+    }
+}
+
+module.exports = ListBans;
