@@ -1,17 +1,21 @@
 const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
 require('dotenv').config();
-const fs = require('fs');
 
 // Import des modules de commande
 const ListBans = require('./Commandes/ListBans');
 const Mineur = require('./Commandes/Mineur');
 const Signalement = require('./Commandes/Signalement');
 const Confession = require('./Commandes/Confession');
-const AlerteNombre = require('./Commandes/AlerteNombre'); // Assurez-vous que le chemin est correct
+const AlerteNombre = require('./Commandes/AlerteNombre');
+
+// Import du module Badgeuse
+const Badgeuse = require('./Commandes/Badgeuse');
 
 const TOKEN = process.env.TOKEN;
 const ALERT_CHANNEL_ID = process.env.ALERT_CHANNEL_ID;
 const VERIFICATEUR_ROLE_ID = process.env.VERIFICATEUR_ROLE_ID;
+const GUILD_ID = process.env.GUILD_ID;
+const PRESENCE_CHANNEL_ID = '1271912933139419176'; // ID du salon de présence
 
 const client = new Client({
     intents: [
@@ -21,7 +25,8 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.DirectMessages
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildPresences // Ajout de l'intent pour les présences
     ],
     partials: [
         Partials.User,
@@ -42,6 +47,8 @@ Signalement(client);
 // Appeler le module AlerteNombre avec le client et les IDs appropriés
 AlerteNombre(client, ALERT_CHANNEL_ID, VERIFICATEUR_ROLE_ID);
 
+// Appeler le module Badgeuse avec le client
+Badgeuse(client, PRESENCE_CHANNEL_ID);
 
 client.once(Events.ClientReady, () => {
     console.log(`Logged in as ${client.user.tag}`);
