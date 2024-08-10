@@ -47,16 +47,28 @@ module.exports = (client, presenceChannelId) => {
 
     client.on(Events.PresenceUpdate, async (oldPresence, newPresence) => {
         console.log('Presence Update Event Triggered');
+
+        if (!newPresence.member) {
+            console.error('PresenceUpdate event does not have a member.');
+            return;
+        }
+
         const member = newPresence.member;
 
-        if (!member || !Object.values(STAFF_MEMBERS).flat().some(staff => staff.id === member.id)) {
+        // Vérifiez si le membre appartient au staff
+        const isStaff = Object.values(STAFF_MEMBERS).flat().some(staff => staff.id === member.id);
+        if (!isStaff) {
+            console.log(`Member ${member.user.tag} (${member.id}) is not in the staff.`);
             return; // Si le membre n'est pas dans le staff, ne rien faire
         }
+
+        // Log de vérification pour s'assurer que le membre est dans le staff
+        console.log(`Member ${member.user.tag} (${member.id}) is in the staff.`);
 
         const memberId = member.id;
         let newColor = COLORS['rouge']; // Valeur par défaut
 
-        // Vérifier les statuts de présence
+        // Vérifiez les statuts de présence
         if (newPresence.status === 'online' || newPresence.status === 'idle') {
             newColor = COLORS['vert']; // En ligne ou inactif (en ligne sur mobile)
         } else if (newPresence.status === 'dnd') {
@@ -67,6 +79,7 @@ module.exports = (client, presenceChannelId) => {
 
         // Mettre à jour la couleur en mémoire
         staffColors[memberId] = newColor;
+        console.log(`Updated color for ${member.user.tag} to ${newColor}`);
 
         // Mettre à jour le message de présence
         if (presenceChannel && presenceChannel.type === ChannelType.GuildText) {
@@ -111,6 +124,7 @@ module.exports = (client, presenceChannelId) => {
             const messages = await channel.messages.fetch();
             const oldPresenceMessage = messages.find(msg => msg.author.id === client.user.id);
             if (oldPresenceMessage) {
+                console.log('Deleting old presence message.');
                 await oldPresenceMessage.delete();
             }
 
@@ -120,6 +134,7 @@ module.exports = (client, presenceChannelId) => {
 - 🟠 : Ne pas déranger
 - 🔴 : Non présent`;
 
+            console.log('Sending new presence message.');
             await channel.send(`**Présences :**\n${presenceList}\n\n${legend}`);
         } catch (error) {
             console.error('Error during presence message update:', error);
