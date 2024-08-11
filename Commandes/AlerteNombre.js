@@ -5,6 +5,14 @@ const ALERT_CHANNEL_ID = '1241404218485637171'; // Remplacez par l'ID du canal d
 const VERIFICATEUR_ROLE_ID = '1234937665925943377'; // Remplacez par l'ID du rôle vérificateur
 const STAFF_ROLE_ID = '1234937665925943378'; // Remplacez par l'ID du rôle staff
 
+// Liste des IDs des salons à exclure
+const EXCLUDED_CHANNEL_IDS = [
+    '1272275397303734293', // Roulette
+    '1272275358183325738', // Commande
+    '1272275437564723335', // BlackJack
+    '1272275473656713339'  // Slot
+];
+
 // Objectif : Conserver les IDs des messages pour lesquels des alertes ont été créées
 const alertsMap = new Map();
 
@@ -15,6 +23,11 @@ const alertsMap = new Map();
 module.exports = (client) => {
     client.on('messageCreate', async message => {
         if (message.author.bot || !message.guild) return;
+
+        // Ignorer les messages des salons spécifiés
+        if (EXCLUDED_CHANNEL_IDS.includes(message.channel.id)) {
+            return;
+        }
 
         // Vérifiez si l'auteur du message a le rôle staff
         const member = await message.guild.members.fetch(message.author.id);
