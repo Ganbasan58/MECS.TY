@@ -14,7 +14,6 @@ const STAFF_MEMBERS = {
         { name: 'Dark Angel', id: '959402622304006144' }
     ],
     'Modérateurs': [
-        { name: 'Romain', id: '689538185310502917' },
         { name: 'Lockey', id: '967846828647252048' }
     ]
 };
@@ -85,17 +84,17 @@ module.exports = (client, presenceChannelId) => {
         staffColors[memberId] = newColor;
         console.log(`Updated color for ${member.user.tag} to ${newColor}`);
 
-        // Mettre à jour le message de présence
+        // Déclenche la mise à jour du message après un délai court
         if (presenceChannel && presenceChannel.type === ChannelType.GuildText) {
             const now = Date.now();
-            if (now - lastUpdate < UPDATE_INTERVAL) return; // Ne pas mettre à jour trop fréquemment
-
-            try {
-                await updatePresenceMessage(presenceChannel);
-            } catch (error) {
-                console.error('Error updating presence message:', error);
+            if (now - lastUpdate >= UPDATE_INTERVAL) {
+                try {
+                    await updatePresenceMessage(presenceChannel);
+                } catch (error) {
+                    console.error('Error updating presence message:', error);
+                }
+                lastUpdate = now; // Mettre à jour le temps de la dernière mise à jour
             }
-            lastUpdate = now; // Mettre à jour le temps de la dernière mise à jour
         } else {
             console.error(`Channel with ID ${presenceChannelId} is not a text channel or does not exist.`);
         }
@@ -109,14 +108,14 @@ module.exports = (client, presenceChannelId) => {
         if (commandName === 'présences') {
             if (presenceChannel && presenceChannel.type === ChannelType.GuildText) {
                 const now = Date.now();
-                if (now - lastUpdate < UPDATE_INTERVAL) return; // Ne pas mettre à jour trop fréquemment
-
-                try {
-                    await updatePresenceMessage(presenceChannel);
-                } catch (error) {
-                    console.error('Error updating presence message:', error);
+                if (now - lastUpdate >= UPDATE_INTERVAL) {
+                    try {
+                        await updatePresenceMessage(presenceChannel);
+                    } catch (error) {
+                        console.error('Error updating presence message:', error);
+                    }
+                    lastUpdate = now; // Mettre à jour le temps de la dernière mise à jour
                 }
-                lastUpdate = now; // Mettre à jour le temps de la dernière mise à jour
             } else {
                 console.error(`Channel with ID ${presenceChannelId} is not a text channel or does not exist.`);
             }
@@ -134,10 +133,14 @@ module.exports = (client, presenceChannelId) => {
 
             // Effacer l'ancien message s'il existe
             if (lastPresenceMessageId) {
-                const oldPresenceMessage = await channel.messages.fetch(lastPresenceMessageId);
-                if (oldPresenceMessage) {
-                    console.log('Deleting old presence message.');
-                    await oldPresenceMessage.delete();
+                try {
+                    const oldPresenceMessage = await channel.messages.fetch(lastPresenceMessageId);
+                    if (oldPresenceMessage) {
+                        console.log('Deleting old presence message.');
+                        await oldPresenceMessage.delete();
+                    }
+                } catch (error) {
+                    console.error('Error fetching or deleting old presence message:', error);
                 }
             }
 
