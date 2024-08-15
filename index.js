@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Events, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 // Import des modules de commande
@@ -16,6 +16,7 @@ const ALERT_CHANNEL_ID = process.env.ALERT_CHANNEL_ID;
 const VERIFICATEUR_ROLE_ID = process.env.VERIFICATEUR_ROLE_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const PRESENCE_CHANNEL_ID = '1271912933139419176'; // ID du salon de présence
+const ETAT_CHANNEL_ID = '1273665218693828699'; // ID du salon d'état
 
 const client = new Client({
     intents: [
@@ -52,6 +53,20 @@ Badgeuse(client, PRESENCE_CHANNEL_ID);
 
 client.once(Events.ClientReady, () => {
     console.log(`Logged in as ${client.user.tag}`);
+    
+    // Récupérer le salon d'état
+    const etatChannel = client.channels.cache.get(ETAT_CHANNEL_ID);
+    if (etatChannel) {
+        // Créer l'embed vert
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00) // Couleur verte
+            .setDescription('✅ | Le bot vient d\'être redémarré avec succès !');
+        
+        // Envoyer l'embed dans le salon d'état
+        etatChannel.send({ embeds: [embed] });
+    } else {
+        console.error(`Le salon avec l'ID ${ETAT_CHANNEL_ID} n'a pas été trouvé.`);
+    }
 });
 
 client.on(Events.MessageCreate, (message) => {
