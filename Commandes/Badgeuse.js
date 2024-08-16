@@ -1,6 +1,5 @@
 const { Events, ChannelType } = require('discord.js');
 
-// Définir les membres du staff avec leurs IDs
 const STAFF_MEMBERS = {
     'Créateurs': [
         { name: 'Slayzox', id: '1233497513349222421' }
@@ -18,21 +17,19 @@ const STAFF_MEMBERS = {
     ]
 };
 
-// Couleurs et leurs emojis
 const COLORS = {
     'vert': '🟢',
     'rouge': '🔴',
     'orange': '🟠'
 };
 
-// Stocker les couleurs en mémoire
 const staffColors = Object.fromEntries(
-    Object.values(STAFF_MEMBERS).flat().map(member => [member.id, COLORS['rouge']]) // Rouge par défaut
+    Object.values(STAFF_MEMBERS).flat().map(member => [member.id, COLORS['rouge']])
 );
 
 let lastPresenceMessageId = null;
 let lastUpdate = 0;
-const UPDATE_INTERVAL = 60000; // 1 minute
+const UPDATE_INTERVAL = 60000;
 
 module.exports = (client, presenceChannelId) => {
     let presenceChannel = null;
@@ -49,96 +46,48 @@ module.exports = (client, presenceChannelId) => {
     });
 
     client.on(Events.PresenceUpdate, async (oldPresence, newPresence) => {
-        console.log('Presence Update Event Triggered');
-
-        if (!newPresence.member) {
-            console.error('PresenceUpdate event does not have a member.');
-            return;
-        }
+        if (!newPresence.member) return;
 
         const member = newPresence.member;
 
-        // Vérifiez si le membre appartient au staff
         const isStaff = Object.values(STAFF_MEMBERS).flat().some(staff => staff.id === member.id);
-        if (!isStaff) {
-            console.log(`Member ${member.user.tag} (${member.id}) is not in the staff.`);
-            return; // Si le membre n'est pas dans le staff, ne rien faire
-        }
-
-        // Log de vérification pour s'assurer que le membre est dans le staff
-        console.log(`Member ${member.user.tag} (${member.id}) is in the staff.`);
+        if (!isStaff) return;
 
         const memberId = member.id;
-        let newColor = COLORS['rouge']; // Valeur par défaut
+        let newColor = COLORS['rouge'];
 
-        // Vérifiez les statuts de présence
         if (newPresence.status === 'online' || newPresence.status === 'idle') {
-            newColor = COLORS['vert']; // En ligne ou inactif (en ligne sur mobile)
+            newColor = COLORS['vert'];
         } else if (newPresence.status === 'dnd') {
-            newColor = COLORS['orange']; // Ne pas déranger
-        } else {
-            newColor = COLORS['rouge']; // Hors ligne ou invisible
+            newColor = COLORS['orange'];
         }
 
-        // Mettre à jour la couleur en mémoire
-        staffColors[memberId] = newColor;
-        console.log(`Updated color for ${member.user.tag} to ${newColor}`);
+        if (staffColors[memberId] !== newColor) {
+            staffColors[memberId] = newColor;
 
-        // Déclenche la mise à jour du message après un délai court
-        if (presenceChannel && presenceChannel.type === ChannelType.GuildText) {
             const now = Date.now();
             if (now - lastUpdate >= UPDATE_INTERVAL) {
+                lastUpdate = now;
                 try {
                     await updatePresenceMessage(presenceChannel);
                 } catch (error) {
                     console.error('Error updating presence message:', error);
                 }
-                lastUpdate = now; // Mettre à jour le temps de la dernière mise à jour
-            }
-        } else {
-            console.error(`Channel with ID ${presenceChannelId} is not a text channel or does not exist.`);
-        }
-    });
-
-    client.on(Events.InteractionCreate, async (interaction) => {
-        if (!interaction.isCommand()) return;
-
-        const { commandName } = interaction;
-
-        if (commandName === 'présences') {
-            if (presenceChannel && presenceChannel.type === ChannelType.GuildText) {
-                const now = Date.now();
-                if (now - lastUpdate >= UPDATE_INTERVAL) {
-                    try {
-                        await updatePresenceMessage(presenceChannel);
-                    } catch (error) {
-                        console.error('Error updating presence message:', error);
-                    }
-                    lastUpdate = now; // Mettre à jour le temps de la dernière mise à jour
-                }
-            } else {
-                console.error(`Channel with ID ${presenceChannelId} is not a text channel or does not exist.`);
             }
         }
     });
 
     async function updatePresenceMessage(channel) {
-        console.log('Updating Presence Message');
         try {
-            const staffEntries = Object.values(STAFF_MEMBERS).flat();
-            const presenceList = staffEntries.map(({ name, id }) => {
-                const color = staffColors[id] || COLORS['rouge']; // Rouge par défaut
+            const presenceList = Object.values(STAFF_MEMBERS).flat().map(({ name, id }) => {
+                const color = staffColors[id] || COLORS['rouge'];
                 return `${color} ${name}`;
             }).join('\n');
 
-            // Effacer l'ancien message s'il existe
             if (lastPresenceMessageId) {
                 try {
                     const oldPresenceMessage = await channel.messages.fetch(lastPresenceMessageId);
-                    if (oldPresenceMessage) {
-                        console.log('Deleting old presence message.');
-                        await oldPresenceMessage.delete();
-                    }
+                    if (oldPresenceMessage) await oldPresenceMessage.delete();
                 } catch (error) {
                     console.error('Error fetching or deleting old presence message:', error);
                 }
@@ -150,9 +99,8 @@ module.exports = (client, presenceChannelId) => {
 - 🟠 : Ne pas déranger
 - 🔴 : Non présent`;
 
-            console.log('Sending new presence message.');
             const newMessage = await channel.send(`**Présences :**\n${presenceList}\n\n${legend}`);
-            lastPresenceMessageId = newMessage.id; // Stocker l'ID du nouveau message
+            lastPresenceMessageId = newMessage.id;
         } catch (error) {
             console.error('Error during presence message update:', error);
         }
