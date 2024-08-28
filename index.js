@@ -17,6 +17,7 @@ const VERIFICATEUR_ROLE_ID = '1234937665925943377'; // ID du rôle de vérificat
 const GUILD_ID = process.env.GUILD_ID;
 const PRESENCE_CHANNEL_ID = '1271912933139419176'; // ID du salon de présence
 const ETAT_CHANNEL_ID = '1273665218693828699'; // ID du salon d'état
+const ATTENTE_MOOVE_CHANNEL_ID = '1256901861449928714'; // ID du salon "attente moove"
 
 const client = new Client({
     intents: [
@@ -24,7 +25,7 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildVoiceStates, // Nécessaire pour détecter les changements de salon vocal
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.GuildPresences
@@ -102,8 +103,15 @@ client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
     mineur.execute(oldMember, newMember);
 });
 
+// Détecter quand un membre rejoint le salon "attente moove"
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+    if (newState.channelId === ATTENTE_MOOVE_CHANNEL_ID && oldState.channelId !== ATTENTE_MOOVE_CHANNEL_ID) {
+        sendAlertEmbed(client, newState.member);
+    }
+});
+
 // Fonction pour envoyer un embed d'alerte
-function sendAlertEmbed(client) {
+function sendAlertEmbed(client, member) {
     const alertChannel = client.channels.cache.get(ALERT_CHANNEL_ID);
     if (!alertChannel) {
         console.error(`Le salon avec l'ID ${ALERT_CHANNEL_ID} n'a pas été trouvé.`);
@@ -113,14 +121,15 @@ function sendAlertEmbed(client) {
     const embed = new EmbedBuilder()
         .setColor('#6010ff') // Couleur spécifiée
         .setTitle('🚨 Nouvelle alerte !')
-        .setDescription(`Une nouvelle alerte a été déclenchée. <@&${VERIFICATEUR_ROLE_ID}>, veuillez vérifier cela dès que possible.`);
+        .setDescription(`Un membre a rejoint le salon "attente moove". <@&${VERIFICATEUR_ROLE_ID}>, veuillez vérifier cela dès que possible.`)
+        .addFields({ name: 'Membre', value: `<@${member.id}>`, inline: true });
 
     const actionRow = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
                 .setCustomId('handleAlert')
                 .setLabel('Traiter la demande')
-                .setStyle(ButtonStyle.Primary)
+                .setStyle(ButtonStyle.Success) // Bouton vert
         );
 
     alertChannel.send({ embeds: [embed], components: [actionRow] });
@@ -129,9 +138,36 @@ function sendAlertEmbed(client) {
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
+    // Vérifier si le bouton cliqué est pour traiter l'alerte
     if (interaction.customId === 'handleAlert') {
-        await interaction.reply({ content: 'La demande est en cours de traitement.', ephemeral: true });
-        // Ajoutez ici toute autre logique que vous voulez exécuter lorsqu'un vérificateur clique sur le bouton
+        const message = interaction.message;
+
+        // Vérifier si le bouton a déjà été cliqué (couleur grise)
+        const row = message.components[0];
+        const button = row.components[0];
+
+        if (button.style === ButtonStyle.Secondary) {
+            // Si le bouton est déjà gris, informer l'utilisateur que la demande a déjà été traitée
+            await interaction.reply({ content: 'La demande a déjà été traitée.', ephemeral: true });
+        } else {
+            // Répondre immédiatement pour éviter l'erreur d'interaction inconnue
+            await interaction.deferUpdate();
+
+            // Ensuite, mettre à jour le message avec le bouton désactivé
+            await interaction.editReply({
+                content: '',
+                components: [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('handleAlert')
+                                .setLabel('Demande traitée')
+                                .setStyle(ButtonStyle.Secondary) // Bouton gris
+                                .setDisabled(true) // Désactiver le bouton
+                        )
+                ]
+            });
+        }
     }
 });
 
