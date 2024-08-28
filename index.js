@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, Events, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
 // Import des modules de commande
@@ -12,8 +12,8 @@ const AlerteNombre = require('./Commandes/AlerteNombre');
 const Badgeuse = require('./Commandes/Badgeuse');
 
 const TOKEN = process.env.TOKEN;
-const ALERT_CHANNEL_ID = process.env.ALERT_CHANNEL_ID;
-const VERIFICATEUR_ROLE_ID = process.env.VERIFICATEUR_ROLE_ID;
+const ALERT_CHANNEL_ID = '1241404218485637171'; // ID du salon d'alerte
+const VERIFICATEUR_ROLE_ID = '1234937665925943377'; // ID du rôle de vérificateur
 const GUILD_ID = process.env.GUILD_ID;
 const PRESENCE_CHANNEL_ID = '1271912933139419176'; // ID du salon de présence
 const ETAT_CHANNEL_ID = '1273665218693828699'; // ID du salon d'état
@@ -27,7 +27,7 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.GuildPresences // Ajout de l'intent pour les présences
+        GatewayIntentBits.GuildPresences
     ],
     partials: [
         Partials.User,
@@ -100,6 +100,39 @@ client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
     }
 
     mineur.execute(oldMember, newMember);
+});
+
+// Fonction pour envoyer un embed d'alerte
+function sendAlertEmbed(client) {
+    const alertChannel = client.channels.cache.get(ALERT_CHANNEL_ID);
+    if (!alertChannel) {
+        console.error(`Le salon avec l'ID ${ALERT_CHANNEL_ID} n'a pas été trouvé.`);
+        return;
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor('#6010ff') // Couleur spécifiée
+        .setTitle('🚨 Nouvelle alerte !')
+        .setDescription(`Une nouvelle alerte a été déclenchée. <@&${VERIFICATEUR_ROLE_ID}>, veuillez vérifier cela dès que possible.`);
+
+    const actionRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('handleAlert')
+                .setLabel('Traiter la demande')
+                .setStyle(ButtonStyle.Primary)
+        );
+
+    alertChannel.send({ embeds: [embed], components: [actionRow] });
+}
+
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isButton()) return;
+
+    if (interaction.customId === 'handleAlert') {
+        await interaction.reply({ content: 'La demande est en cours de traitement.', ephemeral: true });
+        // Ajoutez ici toute autre logique que vous voulez exécuter lorsqu'un vérificateur clique sur le bouton
+    }
 });
 
 client.on(Events.Error, (error) => {
