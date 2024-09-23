@@ -8,9 +8,6 @@ const Signalement = require('./Commandes/Signalement');
 const Confession = require('./Commandes/Confession');
 const AlerteNombre = require('./Commandes/AlerteNombre');
 
-// Import du module Badgeuse
-const Badgeuse = require('./Commandes/Badgeuse');
-
 const TOKEN = process.env.TOKEN;
 const ALERT_CHANNEL_ID = '1241404218485637171'; // ID du salon d'alerte
 const VERIFICATEUR_ROLE_ID = '1234937665925943377'; // ID du rôle de vérificateur
@@ -48,9 +45,6 @@ Signalement(client);
 
 // Appeler le module AlerteNombre avec le client et les IDs appropriés
 AlerteNombre(client, ALERT_CHANNEL_ID, VERIFICATEUR_ROLE_ID);
-
-// Appeler le module Badgeuse avec le client
-Badgeuse(client, PRESENCE_CHANNEL_ID);
 
 client.once(Events.ClientReady, () => {
     console.log(`Logged in as ${client.user.tag}`);
